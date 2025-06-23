@@ -78,15 +78,13 @@ def load_dataset(dataset: str, data_dir: Optional[str] = None) -> \
 
 def load_partition_table(dataset: str):
     """
-    Loads the dataset and returns the dataframes for the train, validation, test and
-    whole dataset.
-
+    Load a precomputed partition table for ``dataset`` if it exists.
 
     Args:
-        dataset: the name of the dataset.
+        dataset: The name of the dataset.
 
     Returns:
-        pt: partition_table of the first 60% data of the dataset
+        The partition table if found, otherwise ``None``.
     """
 
     data_dir = os.path.join(get_project_root_dir(), "partition_data")
@@ -106,12 +104,13 @@ def load_partition_table(dataset: str):
 
 def load_partition_table(dataset: str):
     """
-    Loads the dataset and returns the dataframes for the train, validation, test and
-    whole dataset.
+    Load a precomputed partition table for ``dataset`` if it exists.
+
     Args:
-        dataset: the name of the dataset.
+        dataset: The name of the dataset.
+
     Returns:
-        pt: partition_table of the first 60% data of the dataset
+        The partition table if found, otherwise ``None``.
     """
 
     data_dir = os.path.join(get_project_root_dir(), "partition_data")
