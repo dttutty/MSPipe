@@ -77,8 +77,8 @@ class Cache:
                 edge_feats = edge_feats.to(torch.float32)
 
         # NB: cache_ratio == 0 means no cache
-        assert edge_cache_ratio >= 0 and edge_cache_ratio <= 1, 'edge_cache_ratio must be in [0, 1]'
-        assert edge_cache_ratio >= 0 and edge_cache_ratio <= 1, 'node_cache_ratio must be in [0, 1]'
+        assert 0 <= edge_cache_ratio <= 1, 'edge_cache_ratio must be in [0, 1]'
+        assert 0 <= node_cache_ratio <= 1, 'node_cache_ratio must be in [0, 1]'
 
         self.edge_cache_ratio = edge_cache_ratio
         self.node_cache_ratio = node_cache_ratio
