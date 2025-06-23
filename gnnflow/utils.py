@@ -80,34 +80,6 @@ def load_partition_table(dataset: str):
     """
     Loads the dataset and returns the dataframes for the train, validation, test and
     whole dataset.
-
-
-    Args:
-        dataset: the name of the dataset.
-
-    Returns:
-        pt: partition_table of the first 60% data of the dataset
-    """
-
-    data_dir = os.path.join(get_project_root_dir(), "partition_data")
-
-    path = os.path.join(data_dir, dataset + '_metis_partition.pt')
-
-    if not os.path.exists(path):
-        logging.info(
-            "Didn't find Partition table under path: {}, using default partition algorithm to partition...".format(path))
-        return None
-
-    logging.info(
-        "Find corresponding file under path {}. Using this file to skip the initial partition phase!".format(path))
-    pt = torch.load(path)
-    return pt
-
-
-def load_partition_table(dataset: str):
-    """
-    Loads the dataset and returns the dataframes for the train, validation, test and
-    whole dataset.
     Args:
         dataset: the name of the dataset.
     Returns:
