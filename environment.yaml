@@ -1,0 +1,48 @@
+name: mspipe
+channels:
+  - rapidsai
+  - conda-forge
+  - pytorch
+  - nvidia
+  - defaults
+
+dependencies:
+  # C++ build dependencies
+  - cmake>=3.18
+  - pybind11>=2.9
+  - spdlog>=1.9
+  - abseil-cpp>=20211102
+  - rmm>=22.02
+
+  # CUDA
+  - cudatoolkit=11.3
+
+  # Python core
+  - python>=3.8,<3.10
+  - numpy=1.22.4
+  - pandas=1.4.2
+  - scipy=1.8.0
+  - scikit-learn=1.1.1
+  - networkx=2.8.5
+  - psutil=5.9.4
+  - requests=2.27.1
+  - tqdm=4.64.0
+  - pyyaml=6.0
+  - pillow=9.0.1
+
+  # PyTorch
+  - pytorch=1.11.0
+  - torchvision=0.12.0
+  - torchaudio=0.11.0
+
+  # pip-only packages
+  - pip
+  - pip:
+      - torch-scatter==2.0.9
+      - torch-sparse==0.6.13
+      - torch-cluster==1.6.0
+      - torch-spline-conv==1.2.1
+      - torch-geometric==2.0.4
+      - dgl==0.8.1
+      - GPUtil==1.4.0
+      - parameterized==0.8.1
