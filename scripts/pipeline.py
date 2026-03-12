@@ -67,7 +67,7 @@ def left_training(mfgs, eid, model, device, cache, distributed, optimizer, crite
 def feature_fetching(cache, device, queue_in, queue_out, stream):
     # logging.info('feature fetching start')
     while True:
-        # retrive from queue
+        # retrieve from queue
         item = queue_in.get()
         # check for stop
         if item is None:
@@ -88,7 +88,7 @@ def feature_fetching(cache, device, queue_in, queue_out, stream):
 
 def memory_fetching(model, distributed, queue_in, queue_out, stream):
     while True:
-        # retrive from queue
+        # retrieve from queue
         item = queue_in.get()
         # check for stop
         if item is None:
@@ -114,7 +114,7 @@ def gnn_training(model, optimizer, criterion, queue_in, queue_out, stream):
     # logging.info('gnn training start')
     neg_sample_ratio = 1
     while True:
-        # retrive from queue
+        # retrieve from queue
         item = queue_in.get()
         # check for stop
         if item is None:
@@ -137,7 +137,7 @@ def gnn_training(model, optimizer, criterion, queue_in, queue_out, stream):
 def memory_update(model, distributed, cache, queue_in, stream):
     # logging.info('memory update start')
     while True:
-        # retrive from queue
+        # retrieve from queue
         item = queue_in.get()
         # check for stop
         if item is None:

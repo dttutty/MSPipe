@@ -29,7 +29,7 @@ def local_sample(train_loader, sampler: DistributedTemporalSampler, queue_out: Q
 def collect_sample_results(sampler: DistributedTemporalSampler, queue_in: Queue, queue_out: Queue):
     layer = 0
     while True:
-        # retrive from queue
+        # retrieve from queue
         item = queue_in.get()
         # check for stop
         if item is None:
@@ -60,7 +60,7 @@ def sample(train_loader, sampler, queue_out):
 def feature_fetching(cache, device, queue_in, queue_out):
     # logging.info('feature fetching start')
     while True:
-        # retrive from queue
+        # retrieve from queue
         item = queue_in.get()
         # check for stop
         if item is None:
@@ -79,7 +79,7 @@ def feature_fetching(cache, device, queue_in, queue_out):
 
 def feature_fetching_local(cache, device, queue_in, queue_out):
     while True:
-        # retrive from queue
+        # retrieve from queue
         item = queue_in.get()
         # check for stop
         if item is None:
@@ -96,7 +96,7 @@ def feature_fetching_local(cache, device, queue_in, queue_out):
 
 def feature_fetching_collect(cache, device, queue_in, queue_out):
     while True:
-        # retrive from queue
+        # retrieve from queue
         item = queue_in.get()
         # check for stop
         if item is None:
@@ -112,7 +112,7 @@ def feature_fetching_collect(cache, device, queue_in, queue_out):
 def memory_fetching(model, distributed, queue_in, queue_out):
     logging.info('memory fetching start')
     while True:
-        # retrive from queue
+        # retrieve from queue
         item = queue_in.get()
         # check for stop
         if item is None:
@@ -137,7 +137,7 @@ def gnn_training(model, optimizer, criterion, queue_in, queue_out):
     # logging.info('gnn training start')
     neg_sample_ratio = 1
     while True:
-        # retrive from queue
+        # retrieve from queue
         item = queue_in.get()
         # check for stop
         if item is None:
@@ -159,7 +159,7 @@ def gnn_training(model, optimizer, criterion, queue_in, queue_out):
 def memory_update(model, distributed, cache, queue_in):
     # logging.info('memory update start')
     while True:
-        # retrive from queue
+        # retrieve from queue
         item = queue_in.get()
         # check for stop
         if item is None:

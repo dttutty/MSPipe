@@ -77,6 +77,6 @@ Training TGN model on the GDELT dataset on more than 1 servers, each server is r
    - `NPROC_PER_NODE`: The number of GPU for each servers
 
 ```sh
-cd script
+cd scripts
 ./run_offline_dist.sh TGN GDELT
 ```

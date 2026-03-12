@@ -35,8 +35,13 @@ class TestModel(unittest.TestCase):
         mfgs = prepare_input(mfgs, node_feats, edge_feats)
         mfgs_to_cuda(mfgs, device)
 
+        neg_sample_ratio = 0
         pred_pos, pred_neg = model(mfgs, eid=eid, edge_feats=edge_feats,
-                                   neg_sample_ratio=0)
+                                   neg_sample_ratio=neg_sample_ratio)
+        self.assertIsInstance(pred_pos, torch.Tensor)
+        self.assertIsInstance(pred_neg, torch.Tensor)
+        self.assertEqual(list(pred_pos.shape), [batch_size, 1])
+        self.assertEqual(list(pred_neg.shape), [batch_size * neg_sample_ratio, 1])
 
     def test_graph_sage_forward(self):
         edge_feats = torch.randn(411749, 172)
@@ -66,7 +71,12 @@ class TestModel(unittest.TestCase):
         mfgs = cache.fetch_feature(mfgs, eid)
         mfgs = prepare_input(mfgs, node_feats, edge_feats)
 
-        pred_pos, pred_neg = model(mfgs, neg_sample_ratio=0)
+        neg_sample_ratio = 0
+        pred_pos, pred_neg = model(mfgs, neg_sample_ratio=neg_sample_ratio)
+        self.assertIsInstance(pred_pos, torch.Tensor)
+        self.assertIsInstance(pred_neg, torch.Tensor)
+        self.assertEqual(list(pred_pos.shape), [batch_size, 1])
+        self.assertEqual(list(pred_neg.shape), [batch_size * neg_sample_ratio, 1])
 
     def test_gat_forward(self):
         edge_feats = torch.randn(411749, 172)
@@ -88,7 +98,12 @@ class TestModel(unittest.TestCase):
         mfgs = prepare_input(mfgs, node_feats, edge_feats)
         mfgs_to_cuda(mfgs, device)
 
-        pred_pos, pred_neg = model(mfgs, neg_sample_ratio=0)
+        neg_sample_ratio = 0
+        pred_pos, pred_neg = model(mfgs, neg_sample_ratio=neg_sample_ratio)
+        self.assertIsInstance(pred_pos, torch.Tensor)
+        self.assertIsInstance(pred_neg, torch.Tensor)
+        self.assertEqual(list(pred_pos.shape), [batch_size, 1])
+        self.assertEqual(list(pred_neg.shape), [batch_size * neg_sample_ratio, 1])
 
 
 if __name__ == "__main__":

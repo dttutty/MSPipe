@@ -76,42 +76,16 @@ def load_dataset(dataset: str, data_dir: Optional[str] = None) -> \
     return train_data, val_data, test_data, full_data
 
 
-def load_partition_table(dataset: str):
-    """
-    Loads the dataset and returns the dataframes for the train, validation, test and
-    whole dataset.
-
-
-    Args:
-        dataset: the name of the dataset.
-
-    Returns:
-        pt: partition_table of the first 60% data of the dataset
-    """
-
-    data_dir = os.path.join(get_project_root_dir(), "partition_data")
-
-    path = os.path.join(data_dir, dataset + '_metis_partition.pt')
-
-    if not os.path.exists(path):
-        logging.info(
-            "Didn't find Partition table under path: {}, using default partition algorithm to partition...".format(path))
-        return None
-
-    logging.info(
-        "Find corresponding file under path {}. Using this file to skip the initial partition phase!".format(path))
-    pt = torch.load(path)
-    return pt
 
 
 def load_partition_table(dataset: str):
     """
-    Loads the dataset and returns the dataframes for the train, validation, test and
-    whole dataset.
+    Load a precomputed partition table for ``dataset`` if it exists.
     Args:
-        dataset: the name of the dataset.
+        dataset: The name of the dataset.
+
     Returns:
-        pt: partition_table of the first 60% data of the dataset
+        The partition table if found, otherwise ``None``.
     """
 
     data_dir = os.path.join(get_project_root_dir(), "partition_data")
@@ -349,7 +323,7 @@ def load_feat(dataset: str, data_dir: Optional[str] = None,
 
 def load_most_similar(path):
     if not os.path.exists(path):
-            raise ValueError('{} does not exist'.format(path))
+        raise ValueError('{} does not exist'.format(path))
     most_similar = np.load(path, allow_pickle=True)
     most_similar = torch.tensor(most_similar)
     logging.info('most_similar {}'.format(most_similar.shape))
