@@ -16,7 +16,7 @@ def get_default_config(model: str, dataset: str):
         Default configuration for the model and dataset.
     """
     model, dataset = model.lower(), dataset.lower()
-    assert model in ["tgn", "tgat", "dysat", "graphsage", "gat", "jodie", 'apan', "dygformer"] and dataset in [
+    assert model in ["tgn", "tgat", "dysat", "graphsage", "gat", "jodie", 'apan'] and dataset in [
         "wiki", "reddit", "mooc", "lastfm", "gdelt", "mag"], "Invalid model or dataset."
 
     mod = sys.modules[__name__]
@@ -108,17 +108,7 @@ _dysat_default_config = {
     "batch_size": 4000
 }
 
-_dygformer_default_config = {
-    "time_feat_dim": 32,
-    "channel_embedding_dim": 32,
-    "patch_size": 1,
-    "num_layers": 2,
-    "num_heads": 2,
-    "dropout": 0.1,
-    "max_input_sequence_length": 128,
-    "use_memory": False,
-    "batch_size": 600
-}
+
 
 _graphsage_default_config = {
     "dim_embed": 100,

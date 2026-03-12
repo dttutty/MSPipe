@@ -14,24 +14,6 @@ def training_batch(model, sampler, cache, target_nodes, ts, eid, device, distrib
     with torch.cuda.stream(Stream):
         if rank == 0 and print_freq > 0 and i % print_freq == 0:
             logging.info("train step: %d", i)
-        base_model = model.module if distributed else model
-        if getattr(base_model, "is_dygformer", False):
-            if isinstance(target_nodes, torch.Tensor):
-                target_nodes_np = target_nodes.cpu().numpy()
-            else:
-                target_nodes_np = target_nodes
-            if isinstance(ts, torch.Tensor):
-                ts_np = ts.cpu().numpy()
-            else:
-                ts_np = ts
-
-            pred_pos, pred_neg = base_model.edge_predict_from_batch(target_nodes_np, ts_np)
-            loss = criterion(pred_pos, torch.ones_like(pred_pos))
-            loss += criterion(pred_neg, torch.zeros_like(pred_neg))
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
-            return
         with lock_pool[0]:
             if sampler is not None:
                 model_name = type(model.module).__name__ if distributed else type(model).__name__

@@ -29,7 +29,6 @@ from gnnflow.data import (DistributedBatchSampler, EdgePredictionDataset,
                           RandomStartBatchSampler, default_collate_ndarray)
 from gnnflow.models.apan import APAN
 from gnnflow.models.dgnn import DGNN
-from gnnflow.models.dygformer import DyGFormer
 from gnnflow.models.gat import GAT
 from gnnflow.models.graphsage import SAGE
 from gnnflow.models.jodie import JODIE
@@ -38,7 +37,6 @@ from gnnflow.utils import (DstRandEdgeSampler, EarlyStopMonitor, allocate_pinned
                            build_dynamic_graph, get_pinned_buffers,
                            get_project_root_dir, load_dataset, load_feat, load_most_similar,
                            mfgs_to_cuda, node_to_dgl_blocks)
-from gnnflow.dygformer_sampler import NeighborSampler
 from scripts.pipeline import feature_fetching, gnn_training, memory_fetching, memory_update, sample
 from scripts.train import training_batch
 
@@ -68,18 +66,6 @@ parser.add_argument("--random-node-dim", type=int, default=0,
                     help="use random node features with given dimension when missing")
 parser.add_argument("--pipe-threads", type=int, default=1,
                     help="number of pipeline threads (use 1 to run sequentially)")
-parser.add_argument("--dygformer-time-dim", type=int, default=None,
-                    help="DyGFormer time feature dimension override")
-parser.add_argument("--dygformer-channel-dim", type=int, default=None,
-                    help="DyGFormer channel embedding dimension override")
-parser.add_argument("--dygformer-patch-size", type=int, default=None,
-                    help="DyGFormer patch size override")
-parser.add_argument("--dygformer-layers", type=int, default=None,
-                    help="DyGFormer transformer layer count override")
-parser.add_argument("--dygformer-heads", type=int, default=None,
-                    help="DyGFormer attention heads override")
-parser.add_argument("--dygformer-max-seq", type=int, default=None,
-                    help="DyGFormer max input sequence length override")
 parser.add_argument("--print-freq", help="print frequency",
                     type=int, default=100)
 parser.add_argument("--seed", type=int, default=42)
@@ -164,18 +150,7 @@ def evaluate(dataloader, sampler, model, criterion, cache, device, nodes=None, n
     with torch.no_grad():
         total_loss = 0
         for target_nodes, ts, eid in dataloader:
-            base_model = model.module if hasattr(model, "module") else model
-            if getattr(base_model, "is_dygformer", False):
-                pred_pos, pred_neg = base_model.edge_predict_from_batch(target_nodes, ts)
-                total_loss += criterion(pred_pos, torch.ones_like(pred_pos))
-                total_loss += criterion(pred_neg, torch.zeros_like(pred_neg))
-                y_pred = torch.cat([pred_pos, pred_neg], dim=0).sigmoid().cpu()
-                y_true = torch.cat(
-                    [torch.ones(pred_pos.size(0)),
-                     torch.zeros(pred_neg.size(0))], dim=0)
-                aucs_mrrs.append(roc_auc_score(y_true, y_pred))
-                aps.append(average_precision_score(y_true, y_pred))
-                continue
+
             if sampler is not None:
                 model_name = type(model.module).__name__ if args.distributed else type(model).__name__
                 if model_name == 'APAN':
@@ -256,19 +231,6 @@ def main():
     logging.info("rank: {}, world_size: {}".format(args.rank, args.world_size))
 
     model_config, data_config = get_default_config(args.model, args.data)
-    if args.model == "DyGFormer":
-        if args.dygformer_time_dim is not None:
-            model_config["time_feat_dim"] = args.dygformer_time_dim
-        if args.dygformer_channel_dim is not None:
-            model_config["channel_embedding_dim"] = args.dygformer_channel_dim
-        if args.dygformer_patch_size is not None:
-            model_config["patch_size"] = args.dygformer_patch_size
-        if args.dygformer_layers is not None:
-            model_config["num_layers"] = args.dygformer_layers
-        if args.dygformer_heads is not None:
-            model_config["num_heads"] = args.dygformer_heads
-        if args.dygformer_max_seq is not None:
-            model_config["max_input_sequence_length"] = args.dygformer_max_seq
     model_config["snapshot_time_window"] = args.snapshot_time_window
     args.use_memory = model_config['use_memory']
 
@@ -387,28 +349,7 @@ def main():
     device = torch.device('cuda:{}'.format(args.local_rank))
     logging.debug("device: {}".format(device))
 
-    if args.model == "DyGFormer":
-        if node_feats is None or edge_feats is None:
-            raise ValueError("DyGFormer requires node and edge features; use --random-node-dim/--random-edge-dim")
-        neighbor_sampler = NeighborSampler(
-            full_data["src"].to_numpy(dtype=np.int64),
-            full_data["dst"].to_numpy(dtype=np.int64),
-            full_data["eid"].to_numpy(dtype=np.int64),
-            full_data["time"].to_numpy(dtype=np.float32),
-            num_nodes=num_nodes)
-        model = DyGFormer(
-            node_raw_features=node_feats.cpu().numpy(),
-            edge_raw_features=edge_feats.cpu().numpy(),
-            neighbor_sampler=neighbor_sampler,
-            time_feat_dim=model_config["time_feat_dim"],
-            channel_embedding_dim=model_config["channel_embedding_dim"],
-            patch_size=model_config["patch_size"],
-            num_layers=model_config["num_layers"],
-            num_heads=model_config["num_heads"],
-            dropout=model_config["dropout"],
-            max_input_sequence_length=model_config["max_input_sequence_length"],
-            device=str(device))
-    elif args.model == "GRAPHSAGE":
+    if args.model == "GRAPHSAGE":
         model = SAGE(dim_node, model_config['dim_embed'])
     elif args.model == 'GAT':
         model = DGNN(dim_node, dim_edge, **model_config, num_nodes=num_nodes,
@@ -424,7 +365,7 @@ def main():
                      memory_device=device, memory_shared=args.distributed)
     model.to(device)
 
-    if type(model).__name__ == 'JODIE' or args.model == "DyGFormer":
+    if type(model).__name__ == 'JODIE':
         sampler = None
     else:
         sampler = TemporalSampler(dgraph, **model_config)
@@ -433,54 +374,50 @@ def main():
         model = torch.nn.parallel.DistributedDataParallel(
             model, device_ids=[args.local_rank], find_unused_parameters=True)
 
-    cache = None
-    if args.model != "DyGFormer":
-        pinned_nfeat_buffs, pinned_efeat_buffs = get_pinned_buffers(
-            model_config['fanouts'], model_config['num_snapshots'], batch_size,
-            dim_node, dim_edge)
+    pinned_nfeat_buffs, pinned_efeat_buffs = get_pinned_buffers(
+        model_config['fanouts'], model_config['num_snapshots'], batch_size,
+        dim_node, dim_edge)
 
-        # Cache
-        cache = caches.__dict__[args.cache](args.edge_cache_ratio, args.node_cache_ratio,
-                                            num_nodes, num_edges, device,
-                                            node_feats, edge_feats,
-                                            dim_node, dim_edge,
-                                            pinned_nfeat_buffs,
-                                            pinned_efeat_buffs,
-                                            None,
-                                            False)
+    # Cache
+    cache = caches.__dict__[args.cache](args.edge_cache_ratio, args.node_cache_ratio,
+                                        num_nodes, num_edges, device,
+                                        node_feats, edge_feats,
+                                        dim_node, dim_edge,
+                                        pinned_nfeat_buffs,
+                                        pinned_efeat_buffs,
+                                        None,
+                                        False)
 
-    if args.model != "DyGFormer" and args.use_memory:
-        # set pinned for memory
-        if args.model == 'APAN':
-            pinned_node_memory_buffs, pinned_node_memory_ts_buffs, \
-            pinned_mailbox_buffs, pinned_mailbox_ts_buffs = allocate_pinned_apan_memory_buffers(
-                model_config['fanouts'],
-                model_config['num_snapshots'],
-                batch_size, model_config['dim_memory'],
-                2 * model_config['dim_memory'] + dim_edge,
-                mailbox_shape=10)
-        else:
-            pinned_node_memory_buffs, pinned_node_memory_ts_buffs, \
-            pinned_mailbox_buffs, pinned_mailbox_ts_buffs = allocate_pinned_memory_buffers(
-                model_config['fanouts'],
-                model_config['num_snapshots'],
-                batch_size, model_config['dim_memory'],
-                2 * model_config['dim_memory'] + dim_edge)
-        if args.distributed:
-            model.module.memory.set_pinned(pinned_node_memory_buffs, pinned_node_memory_ts_buffs, pinned_mailbox_buffs, pinned_mailbox_ts_buffs)
-        else:
-            model.memory.set_pinned(pinned_node_memory_buffs, pinned_node_memory_ts_buffs, pinned_mailbox_buffs, pinned_mailbox_ts_buffs)
+    # set pinned for memory
+    if args.model == 'APAN':
+        pinned_node_memory_buffs, pinned_node_memory_ts_buffs, \
+        pinned_mailbox_buffs, pinned_mailbox_ts_buffs = allocate_pinned_apan_memory_buffers(
+            model_config['fanouts'],
+            model_config['num_snapshots'],
+            batch_size, model_config['dim_memory'],
+            2 * model_config['dim_memory'] + dim_edge,
+            mailbox_shape=10)
+    else:
+        pinned_node_memory_buffs, pinned_node_memory_ts_buffs, \
+        pinned_mailbox_buffs, pinned_mailbox_ts_buffs = allocate_pinned_memory_buffers(
+            model_config['fanouts'],
+            model_config['num_snapshots'],
+            batch_size, model_config['dim_memory'],
+            2 * model_config['dim_memory'] + dim_edge)
+    if args.distributed:
+        model.module.memory.set_pinned(pinned_node_memory_buffs, pinned_node_memory_ts_buffs, pinned_mailbox_buffs, pinned_mailbox_ts_buffs)
+    else:
+        model.memory.set_pinned(pinned_node_memory_buffs, pinned_node_memory_ts_buffs, pinned_mailbox_buffs, pinned_mailbox_ts_buffs)
 
     # only gnnlab static need to pass param
-    if cache is not None and args.cache == 'GNNLabStaticCache':
+    if args.cache == 'GNNLabStaticCache':
         cache.init_cache(sampler=sampler, train_df=train_data,
                          pre_sampling_rounds=2)
-    elif cache is not None:
+    else:
         cache.init_cache()
 
-    if cache is not None:
-        logging.info("cache mem size: {:.2f} MB".format(
-            cache.get_mem_size() / 1000 / 1000))
+    logging.info("cache mem size: {:.2f} MB".format(
+        cache.get_mem_size() / 1000 / 1000))
 
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
     criterion = torch.nn.BCEWithLogitsLoss()
@@ -511,7 +448,7 @@ def train(train_loader, val_loader, sampler, model, optimizer, criterion,
     epoch_time_sum = 0
 
     # create threadpool
-    num_process = max(1, args.pipe_threads)
+    num_process = 3
     stream_pool = [torch.cuda.Stream(device=device, priority=0)
                    for _ in range(num_process)]
 
@@ -521,8 +458,8 @@ def train(train_loader, val_loader, sampler, model, optimizer, criterion,
     logging.info('Start training...')
     for e in range(args.epoch):
         model.train()
-        if cache is not None:
-            cache.reset()
+
+        cache.reset()
         if e > 0:
             if args.distributed:
                 model.module.reset()
@@ -539,23 +476,16 @@ def train(train_loader, val_loader, sampler, model, optimizer, criterion,
         total_model_train_time = 0
         total_samples = 0
 
+
+
+        pool = ThreadPool(processes=num_process)
         epoch_time_start = time.time()
+        for i, (target_nodes, ts, eid) in enumerate(train_loader):
+            pool.apply_async(training_batch, args=(model, sampler, cache, target_nodes,
+                                                    ts, eid, device, args.distributed, optimizer, criterion, stream_pool[i % num_process], signal_queue, lock_pool, i, args.rank, args.print_freq, most_similar))
 
-        if num_process == 1:
-            for i, (target_nodes, ts, eid) in enumerate(train_loader):
-                training_batch(
-                    model, sampler, cache, target_nodes, ts, eid, device,
-                    args.distributed, optimizer, criterion,
-                    stream_pool[0], signal_queue, lock_pool, i, args.rank,
-                    args.print_freq, most_similar)
-        else:
-            pool = ThreadPool(processes=num_process)
-            for i, (target_nodes, ts, eid) in enumerate(train_loader):
-                pool.apply_async(training_batch, args=(model, sampler, cache, target_nodes,
-                                                       ts, eid, device, args.distributed, optimizer, criterion, stream_pool[i % num_process], signal_queue, lock_pool, i, args.rank, args.print_freq, most_similar))
-
-            pool.close()
-            pool.join()
+        pool.close()
+        pool.join()
 
         epoch_time = time.time() - epoch_time_start
         epoch_time_sum += epoch_time
