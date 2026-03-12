@@ -53,8 +53,9 @@ class Cache:
             raise ValueError('Cache must be on GPU')
 
         if node_feats is None and edge_feats is None and not distributed:
-            raise ValueError(
-                'At least one of node_feats and edge_feats must be provided')
+            if dim_node_feat != 0 or dim_edge_feat != 0:
+                raise ValueError(
+                    'At least one of node_feats and edge_feats must be provided')
 
         if node_feats is not None and node_feats.shape[0] != num_nodes:
             raise ValueError(
@@ -420,6 +421,10 @@ class Cache:
                     # self.target_edge_features = self.edge_feats[eid]
                     self.target_edge_features.put(self.edge_feats[eid])
 
+        if self.dim_edge_feat == 0 and target_edge_features:
+            # Keep queue in sync when no edge features exist.
+            self.target_edge_features.put(None)
+
         return mfgs
 
     def fetch_feature_local(self, mfgs: List[List[DGLBlock]],
@@ -682,5 +687,8 @@ class Cache:
                 else:
                     # self.target_edge_features = self.edge_feats[eid]
                     self.target_edge_features.put(self.edge_feats[eid])
+
+        if self.dim_edge_feat == 0 and target_edge_features:
+            self.target_edge_features.put(None)
 
         return mfgs

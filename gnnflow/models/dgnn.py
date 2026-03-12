@@ -11,7 +11,7 @@ from dgl.heterograph import DGLBlock
 from gnnflow.distributed.kvstore import KVStoreClient
 from gnnflow.models.modules.layers import EdgePredictor, TransfomerAttentionLayer
 from gnnflow.models.modules.memory import Memory
-from gnnflow.models.modules.memory_updater import GRUMemeoryUpdater
+from gnnflow.models.modules.memory_updater import DeduplicatedGRUUpdater as GRUMemeoryUpdater
 
 
 class DGNN(torch.nn.Module):

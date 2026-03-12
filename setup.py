@@ -41,6 +41,7 @@ class CustomBuildExt(build_ext):
         cmake_args = [
             "-DCMAKE_BUILD_TYPE={}".format(config),
             "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON",
+            "-DCMAKE_POLICY_VERSION_MINIMUM=3.5",
             "-DPYTHON_EXECUTABLE:FILEPATH={}".format(sys.executable),
             "-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={}".format(build_dir),
             "-DCMAKE_PREFIX_PATH={}".format(torch.utils.cmake_prefix_path),

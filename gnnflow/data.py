@@ -7,7 +7,10 @@ import numpy as np
 import pandas as pd
 import torch
 import torch.distributed
-from torch._six import string_classes
+try:
+    from torch._six import string_classes
+except ModuleNotFoundError:
+    string_classes = (str,)
 from torch.utils.data import BatchSampler, Dataset, Sampler
 
 from gnnflow.utils import DstRandEdgeSampler, RandEdgeSampler, local_rank

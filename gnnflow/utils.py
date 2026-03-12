@@ -277,10 +277,14 @@ def load_feat(dataset: str, data_dir: Optional[str] = None,
     node_feat_path = os.path.join(dataset_path, 'node_features.npy')
     edge_feat_path = os.path.join(dataset_path, 'edge_features.npy')
 
-    if not os.path.exists(node_feat_path) and \
-            not os.path.exists(edge_feat_path):
-        raise ValueError("Both {} and {} do not exist".format(
-            node_feat_path, edge_feat_path))
+    missing = []
+    if load_node and not os.path.exists(node_feat_path):
+        missing.append(node_feat_path)
+    if load_edge and not os.path.exists(edge_feat_path):
+        missing.append(edge_feat_path)
+    if missing:
+        raise ValueError("Missing feature file(s): {}".format(
+            ", ".join(missing)))
 
     mmap_mode = "r+" if memmap else None
 
