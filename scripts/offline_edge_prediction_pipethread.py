@@ -41,7 +41,7 @@ from scripts.pipeline import feature_fetching, gnn_training, memory_fetching, me
 from scripts.train import training_batch
 
 datasets = ['REDDIT', 'GDELT', 'LASTFM', 'MAG', 'MOOC', 'WIKI']
-model_names = ['TGN', 'TGAT', 'DySAT', 'GRAPHSAGE', 'GAT', 'APAN', 'JODIE', 'DyGFormer']
+model_names = ['TGN', 'TGAT', 'DySAT', 'GRAPHSAGE', 'GAT', 'APAN', 'JODIE']
 cache_names = sorted(name for name in caches.__dict__
                      if not name.startswith("__")
                      and callable(caches.__dict__[name]))

@@ -15,6 +15,6 @@ time torchrun \
   --ingestion-batch-size 1000 \
   --num-workers 0 \
   --num-chunks 1 \
-  --batch-size 4000 \
+  --batch-size 600 \
   --print-freq 10 \
   --epoch 10
