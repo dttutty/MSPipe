@@ -1,3 +1,64 @@
 [build-system]
-requires = ["setuptools>=64", "wheel", "torch"]
+requires = ["setuptools>=68", "wheel", "pybind11>=2.13,<3"]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "gnnflow"
+version = "0.0.1"
+description = "A comprehensive framework for dynamic graph neural networks"
+readme = "README.md"
+requires-python = ">=3.10,<3.11"
+license = "Apache-2.0"
+dependencies = [
+    "numpy==1.26.4",
+    "pandas==2.3.3",
+    "psutil==7.1.0",
+    "tqdm==4.67.1",
+    "gputil==1.4.0",
+    "scikit-learn==1.7.2",
+    "torch==2.2.2+cu118",
+    "dgl==2.4.0+cu118",
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Operating System :: POSIX :: Linux",
+]
+
+[dependency-groups]
+dev = [
+    "parameterized==0.8.1",
+    "pybind11>=2.13,<3",
+    "ruff>=0.15.7",
+    "setuptools>=68",
+    "wheel>=0.45",
+]
+
+[project.urls]
+Repository = "https://github.com/jasperzhong/GNNFlow"
+
+[tool.setuptools.packages.find]
+exclude = ["tests*", "scripts*", "tgl*", "build*", "third_party*"]
+
+[tool.uv]
+default-groups = ["dev"]
+environments = ["sys_platform == 'linux' and platform_machine == 'x86_64' and python_version == '3.10'"]
+find-links = [
+    "https://data.dgl.ai/wheels/torch-2.2/cu118/repo.html",
+]
+cache-keys = [
+    { file = "pyproject.toml" },
+    { file = "setup.py" },
+    { file = "CMakeLists.txt" },
+    { file = "tgl/setup_tgl.py" },
+    { dir = "gnnflow/csrc" },
+]
+no-build-isolation-package = ["gnnflow"]
+
+[[tool.uv.index]]
+name = "pytorch-cu118"
+url = "https://download.pytorch.org/whl/cu118"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-cu118" }

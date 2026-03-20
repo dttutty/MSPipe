@@ -219,8 +219,8 @@ def main():
     args.use_memory = model_config['use_memory']
 
     if args.distributed:
-        # graph is stored in shared memory
-        data_config["mem_resource_type"] = "shared"
+        # Use host-visible pinned memory for offload / sampling coordination.
+        data_config["mem_resource_type"] = "pinned"
 
     train_data, val_data, test_data, full_data = load_dataset(args.data)
     train_num_nodes = len(np.unique(np.concatenate(

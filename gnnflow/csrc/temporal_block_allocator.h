@@ -1,8 +1,10 @@
 #ifndef GNNFLOW_TEMPORAL_BLOCK_ALLOCATOR_H_
 #define GNNFLOW_TEMPORAL_BLOCK_ALLOCATOR_H_
 
+#include <cstddef>
 #include <mutex>
 #include <rmm/mr/device/device_memory_resource.hpp>
+#include <rmm/mr/host/host_memory_resource.hpp>
 #include <stack>
 #include <vector>
 
@@ -81,6 +83,11 @@ class TemporalBlockAllocator {
   std::size_t get_total_memory_usage() const { return allocated_; }
 
  private:
+  bool UseHostMemoryResource() const;
+
+  void* AllocateBytes(std::size_t size) noexcept(false);
+  void DeallocateBytes(void* ptr, std::size_t size);
+
   std::size_t AlignUp(std::size_t size);
 
   void AllocateInternal(TemporalBlock* block, std::size_t size) noexcept(false);
@@ -91,7 +98,8 @@ class TemporalBlockAllocator {
 
   std::size_t minium_block_size_;
   MemoryResourceType mem_resource_type_;
-  std::stack<rmm::mr::device_memory_resource*> mem_resources_;
+  std::stack<rmm::mr::device_memory_resource*> device_mem_resources_;
+  std::stack<rmm::mr::host_memory_resource*> host_mem_resources_;
 
   std::unordered_map<TemporalBlock*, std::string> saved_blocks_;
   std::unordered_map<NIDType, std::size_t> num_saved_blocks_;

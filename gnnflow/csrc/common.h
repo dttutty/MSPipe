@@ -84,8 +84,7 @@ enum class SamplingPolicy { kSamplingPolicyRecent, kSamplingPolicyUniform };
 enum class MemoryResourceType {
   kMemoryResourceTypeCUDA,
   kMemoryResourceTypeUnified,
-  kMemoryResourceTypePinned,
-  kMemoryResourceTypeShared
+  kMemoryResourceTypePinned
 };
 
 };  // namespace gnnflow

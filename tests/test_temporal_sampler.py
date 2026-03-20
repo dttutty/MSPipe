@@ -23,7 +23,7 @@ default_config = {
 class TestTemporalSampler(unittest.TestCase):
 
     @parameterized.expand(
-        itertools.product(["cuda", "unified", "pinned", "shared"]))
+        itertools.product(["cuda", "unified", "pinned"]))
     def test_sample_layer(self, mem_resource_type):
         # build the dynamic graph
         config = default_config.copy()
@@ -78,7 +78,7 @@ class TestTemporalSampler(unittest.TestCase):
         print("Test sample_layer passed")
 
     @parameterized.expand(
-        itertools.product(["cuda", "unified", "pinned", "shared"]))
+        itertools.product(["cuda", "unified", "pinned"]))
     def test_sample_layer_uniform(self, mem_resource_type):
         # build the dynamic graph
         config = default_config.copy()
@@ -110,7 +110,7 @@ class TestTemporalSampler(unittest.TestCase):
         print("Test sample_layer uniform passed")
 
     @parameterized.expand(
-        itertools.product(["cuda", "unified", "pinned", "shared"]))
+        itertools.product(["cuda", "unified", "pinned"]))
     def test_sample_layer_with_multiple_blocks(self, mem_resource_type):
         # build the dynamic graph
         config = default_config.copy()
@@ -238,7 +238,7 @@ class TestTemporalSampler(unittest.TestCase):
         print("Test sample_layer with multiple blocks (offload) passed")
 
     @parameterized.expand(
-        itertools.product(["cuda", "unified", "pinned", "shared"]))
+        itertools.product(["cuda", "unified", "pinned"]))
     def test_sampler_layer_with_duplicate_vertices(self, mem_resource_type):
         # build the dynamic graph
         config = default_config.copy()
@@ -293,7 +293,7 @@ class TestTemporalSampler(unittest.TestCase):
         print("Test sampler_layer_with_duplicate_vertices passed")
 
     @parameterized.expand(
-        itertools.product(["cuda", "unified", "pinned", "shared"]))
+        itertools.product(["cuda", "unified", "pinned"]))
     def test_sample_multi_layers(self, mem_resource_type):
         # build the dynamic graph
         config = default_config.copy()
@@ -386,7 +386,7 @@ class TestTemporalSampler(unittest.TestCase):
         print("Test sample_multi_layers passed")
 
     @parameterized.expand(
-        itertools.product(["cuda", "unified", "pinned", "shared"]))
+        itertools.product(["cuda", "unified", "pinned"]))
     def test_sample_multi_snapshots(self, mem_resource_type):
         # build the dynamic graph
         config = default_config.copy()
@@ -489,7 +489,7 @@ class TestTemporalSampler(unittest.TestCase):
         print("Test sample_multi_snapshots passed")
 
     @parameterized.expand(
-        itertools.product(["cuda", "unified", "pinned", "shared"]))
+        itertools.product(["cuda", "unified", "pinned"]))
     def test_sample_multi_layers_multi_snapshots(self, mem_resource_type):
         # build the dynamic graph
         config = default_config.copy()
@@ -656,7 +656,7 @@ class TestTemporalSampler(unittest.TestCase):
         print("Test sample_multi_layers_multi_snapshots passed")
 
     @parameterized.expand(
-        itertools.product(["cuda", "unified", "pinned", "shared"]))
+        itertools.product(["cuda", "unified", "pinned"]))
     def test_sample_layer_with_different_batch_size(self, mem_resource_type):
         # build the dynamic graph
         config = default_config.copy()

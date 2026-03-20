@@ -38,9 +38,12 @@ file(GLOB_RECURSE GNNFLOW_SRC_CUDA_FILES ${PROJECT_SOURCE_DIR}/gnnflow/csrc/*.cu
 set_source_files_properties(${GNNFLOW_SRC_CUDA_FILES} PROPERTIES LANGUAGE CUDA)
 list(APPEND GNNFLOW_SRC_FILES ${GNNFLOW_SRC_CUDA_FILES})
 
-pybind11_add_module(${TARGET_LIB} ${GNNFLOW_SRC_FILES})
+pybind11_add_module(${TARGET_LIB} NO_EXTRAS ${GNNFLOW_SRC_FILES})
 
+target_compile_definitions(${TARGET_LIB} PRIVATE SPDLOG_FMT_EXTERNAL)
+target_link_libraries(${TARGET_LIB} PRIVATE rmm::rmm)
 target_link_libraries(${TARGET_LIB} PRIVATE absl::flat_hash_map)
+target_link_libraries(${TARGET_LIB} PRIVATE fmt::fmt-header-only)
 
 find_package(Torch REQUIRED)
 find_library(TORCH_PYTHON_LIBRARY torch_python PATHS "${TORCH_INSTALL_PREFIX}/lib")

@@ -21,6 +21,21 @@
 
 namespace gnnflow {
 
+namespace {
+
+template <typename T>
+std::vector<T> CopyToHost(const T* ptr, std::size_t size) {
+  std::vector<T> values(size);
+  if (size == 0) {
+    return values;
+  }
+
+  CUDA_CALL(cudaMemcpy(values.data(), ptr, sizeof(T) * size, cudaMemcpyDefault));
+  return values;
+}
+
+}  // namespace
+
 DynamicGraph::DynamicGraph(std::size_t initial_pool_size,
                            std::size_t maximum_pool_size,
                            MemoryResourceType mem_resource_type,
@@ -304,22 +319,9 @@ DynamicGraph::NodeNeighborTuple DynamicGraph::get_temporal_neighbors(
     auto& list = h_copy_of_d_node_table_[node];
     auto block = list.tail;
     while (block != nullptr) {
-      std::vector<NIDType> dst_nodes(block->size);
-      std::vector<TimestampType> timestamps(block->size);
-      std::vector<EIDType> eids(block->size);
-
-      thrust::copy(thrust::device_ptr<NIDType>(block->dst_nodes),
-                   thrust::device_ptr<NIDType>(block->dst_nodes) + block->size,
-                   dst_nodes.begin());
-
-      thrust::copy(
-          thrust::device_ptr<TimestampType>(block->timestamps),
-          thrust::device_ptr<TimestampType>(block->timestamps) + block->size,
-          timestamps.begin());
-
-      thrust::copy(thrust::device_ptr<EIDType>(block->eids),
-                   thrust::device_ptr<EIDType>(block->eids) + block->size,
-                   eids.begin());
+      auto dst_nodes = CopyToHost(block->dst_nodes, block->size);
+      auto timestamps = CopyToHost(block->timestamps, block->size);
+      auto eids = CopyToHost(block->eids, block->size);
 
       std::get<0>(result).insert(std::end(std::get<0>(result)),
                                  std::rbegin(dst_nodes), std::rend(dst_nodes));
@@ -389,8 +391,8 @@ std::size_t DynamicGraph::OffloadOldBlocks(TimestampType timestamp,
       auto next = cur->next;
       if (cur->end_timestamp < timestamp) {
         // remove from `edges_`
-        for (auto i = 0; i < cur->size; i++) {
-          auto eid = cur->eids[i];
+        auto eids = CopyToHost(cur->eids, cur->size);
+        for (auto eid : eids) {
           if (--edges_[eid] == 0) {
             edges_.erase(eid);
           }

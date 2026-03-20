@@ -35,8 +35,7 @@ PYBIND11_MODULE(libgnnflow, m) {
   py::enum_<MemoryResourceType>(m, "MemoryResourceType")
       .value("CUDA", MemoryResourceType::kMemoryResourceTypeCUDA)
       .value("UNIFIED", MemoryResourceType::kMemoryResourceTypeUnified)
-      .value("PINNED", MemoryResourceType::kMemoryResourceTypePinned)
-      .value("SHARED", MemoryResourceType::kMemoryResourceTypeShared);
+      .value("PINNED", MemoryResourceType::kMemoryResourceTypePinned);
 
   py::class_<DynamicGraph>(m, "_DynamicGraph")
       .def(py::init<std::size_t, std::size_t, MemoryResourceType, std::size_t,

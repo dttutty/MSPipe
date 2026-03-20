@@ -2,10 +2,8 @@
 #include <limits>
 #include <rmm/mr/device/cuda_memory_resource.hpp>
 #include <rmm/mr/device/managed_memory_resource.hpp>
-#include <rmm/mr/device/per_device_resource.hpp>
-#include <rmm/mr/device/pinned_memory_resource.hpp>
 #include <rmm/mr/device/pool_memory_resource.hpp>
-#include <rmm/mr/device/shared_memory_resource.hpp>
+#include <rmm/mr/host/pinned_memory_resource.hpp>
 
 #include "logging.h"
 #include "temporal_block_allocator.h"
@@ -27,39 +25,25 @@ TemporalBlockAllocator::TemporalBlockAllocator(
   switch (mem_resource_type) {
     case MemoryResourceType::kMemoryResourceTypeCUDA: {
       auto mem_res = new rmm::mr::cuda_memory_resource();
-      mem_resources_.push(mem_res);
+      device_mem_resources_.push(mem_res);
       auto pool_res =
           new rmm::mr::pool_memory_resource<rmm::mr::cuda_memory_resource>(
               mem_res, initial_pool_size, maximum_pool_size);
-      mem_resources_.push(pool_res);
+      device_mem_resources_.push(pool_res);
       break;
     }
     case MemoryResourceType::kMemoryResourceTypeUnified: {
       auto mem_res = new rmm::mr::managed_memory_resource();
-      mem_resources_.push(mem_res);
+      device_mem_resources_.push(mem_res);
       auto pool_res =
           new rmm::mr::pool_memory_resource<rmm::mr::managed_memory_resource>(
               mem_res, initial_pool_size, maximum_pool_size);
-      mem_resources_.push(pool_res);
+      device_mem_resources_.push(pool_res);
       break;
     }
     case MemoryResourceType::kMemoryResourceTypePinned: {
       auto mem_res = new rmm::mr::pinned_memory_resource();
-      mem_resources_.push(mem_res);
-      auto pool_res =
-          new rmm::mr::pool_memory_resource<rmm::mr::pinned_memory_resource>(
-              mem_res, initial_pool_size, maximum_pool_size);
-      mem_resources_.push(pool_res);
-      break;
-    }
-    case MemoryResourceType::kMemoryResourceTypeShared: {
-      // NB: device ID is equal to the local rank
-      auto mem_res = new rmm::mr::shared_memory_resource(device);
-      mem_resources_.push(mem_res);
-      auto pool_res =
-          new rmm::mr::pool_memory_resource<rmm::mr::shared_memory_resource>(
-              mem_res, initial_pool_size, maximum_pool_size);
-      mem_resources_.push(pool_res);
+      host_mem_resources_.push(mem_res);
       break;
     }
   }
@@ -72,12 +56,35 @@ TemporalBlockAllocator::~TemporalBlockAllocator() {
   }
 
   // release the memory pool
-  while (!mem_resources_.empty()) {
-    delete mem_resources_.top();
-    mem_resources_.pop();
+  while (!device_mem_resources_.empty()) {
+    delete device_mem_resources_.top();
+    device_mem_resources_.pop();
+  }
+  while (!host_mem_resources_.empty()) {
+    delete host_mem_resources_.top();
+    host_mem_resources_.pop();
   }
 
   blocks_.clear();
+}
+
+bool TemporalBlockAllocator::UseHostMemoryResource() const {
+  return mem_resource_type_ == MemoryResourceType::kMemoryResourceTypePinned;
+}
+
+void* TemporalBlockAllocator::AllocateBytes(std::size_t size) noexcept(false) {
+  if (UseHostMemoryResource()) {
+    return host_mem_resources_.top()->allocate(size);
+  }
+  return device_mem_resources_.top()->allocate(size);
+}
+
+void TemporalBlockAllocator::DeallocateBytes(void* ptr, std::size_t size) {
+  if (UseHostMemoryResource()) {
+    host_mem_resources_.top()->deallocate(ptr, size);
+    return;
+  }
+  device_mem_resources_.top()->deallocate(ptr, size);
 }
 
 std::size_t TemporalBlockAllocator::AlignUp(std::size_t size) {
@@ -92,7 +99,7 @@ TemporalBlock *TemporalBlockAllocator::Allocate(std::size_t size) {
 
   try {
     AllocateInternal(block, size);
-  } catch (rmm::bad_alloc &) {
+  } catch (std::bad_alloc&) {
     // failed to allocate memory
     DeallocateInternal(block);
 
@@ -144,32 +151,30 @@ void TemporalBlockAllocator::AllocateInternal(
 
   // allocate memory for the block
   // NB: rmm is thread-safe
-  auto mr = mem_resources_.top();
-  block->dst_nodes =
-      static_cast<NIDType *>(mr->allocate(capacity * sizeof(NIDType)));
-  block->timestamps = static_cast<TimestampType *>(
-      mr->allocate(capacity * sizeof(TimestampType)));
+  block->dst_nodes = static_cast<NIDType*>(
+      AllocateBytes(capacity * sizeof(NIDType)));
+  block->timestamps = static_cast<TimestampType*>(
+      AllocateBytes(capacity * sizeof(TimestampType)));
   block->eids =
-      static_cast<EIDType *>(mr->allocate(capacity * sizeof(EIDType)));
+      static_cast<EIDType*>(AllocateBytes(capacity * sizeof(EIDType)));
 
   allocated_ +=
       capacity * (sizeof(NIDType) + sizeof(TimestampType) + sizeof(EIDType));
 }
 
 void TemporalBlockAllocator::DeallocateInternal(TemporalBlock *block) {
-  auto mr = mem_resources_.top();
   if (block->dst_nodes != nullptr) {
-    mr->deallocate(block->dst_nodes, block->capacity * sizeof(NIDType));
+    DeallocateBytes(block->dst_nodes, block->capacity * sizeof(NIDType));
     block->dst_nodes = nullptr;
     allocated_ -= block->capacity * sizeof(NIDType);
   }
   if (block->timestamps != nullptr) {
-    mr->deallocate(block->timestamps, block->capacity * sizeof(TimestampType));
+    DeallocateBytes(block->timestamps, block->capacity * sizeof(TimestampType));
     block->timestamps = nullptr;
     allocated_ -= block->capacity * sizeof(TimestampType);
   }
   if (block->eids != nullptr) {
-    mr->deallocate(block->eids, block->capacity * sizeof(EIDType));
+    DeallocateBytes(block->eids, block->capacity * sizeof(EIDType));
     block->eids = nullptr;
     allocated_ -= block->capacity * sizeof(EIDType);
   }
@@ -181,9 +186,8 @@ void TemporalBlockAllocator::DeallocateInternal(TemporalBlock *block) {
 
 void TemporalBlockAllocator::SaveToFile(TemporalBlock *block,
                                         NIDType src_node) {
-  if (mem_resource_type_ != MemoryResourceType::kMemoryResourceTypePinned &&
-      mem_resource_type_ != MemoryResourceType::kMemoryResourceTypeShared) {
-    LOG(FATAL) << "Only pinned and shared memory resources are supported";
+  if (mem_resource_type_ != MemoryResourceType::kMemoryResourceTypePinned) {
+    LOG(FATAL) << "Only pinned memory resources are supported";
   }
 
   // NB: only first rank saves the temporal block
@@ -224,8 +228,6 @@ void TemporalBlockAllocator::ReadFromFile(TemporalBlock *block,
                                           NIDType src_node) {
   if (mem_resource_type_ != MemoryResourceType::kMemoryResourceTypePinned) {
     LOG(FATAL) << "Only pinned memory resources are supported";
-    // NB: shared memory resources are not supported because we need to know the
-    // offset of the temporal block in the shared memory
   }
   CHECK_EQ(device_, 0) << "Only first rank can read temporal blocks from file";
 

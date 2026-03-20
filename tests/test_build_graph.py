@@ -15,7 +15,7 @@ _, default_config = get_default_config("TGN", "REDDIT")
 
 class TestBuildGraph(unittest.TestCase):
 
-    @parameterized.expand(itertools.product(["cuda", "unified", "pinned", "shared"]))
+    @parameterized.expand(itertools.product(["cuda", "unified", "pinned"]))
     def test_build_graph(self, mem_resource_type):
         """
         Test building a dynamic graph from edges.csv(REDDIT)
@@ -49,7 +49,7 @@ class TestBuildGraph(unittest.TestCase):
             self.assertEqual(len(graph_out_edges), dgraph.out_degree([src]))
             self.assertTrue(np.allclose(ts, graph_ts))
 
-    @parameterized.expand(itertools.product(["cuda", "unified", "pinned", "shared"]))
+    @parameterized.expand(itertools.product(["cuda", "unified", "pinned"]))
     def test_build_graph_undirected(self, mem_resource_type):
         """
         Test building a dynamic graph from edges.csv(REDDIT)
