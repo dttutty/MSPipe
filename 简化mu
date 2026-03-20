@@ -1,0 +1,24 @@
+这个是GRU
+INFO:root:train step: 110
+INFO:root:Epoch 100/100 | Validation ap 0.8566 | Validation auc 0.8769 | Train time 4.51 s | Validation time 1.74 s | Train Throughput 0.00 samples/s |
+INFO:root:Test ap:0.863020  test auc:0.884010
+INFO:root:Avg epoch time: 4.472284967899323
+INFO:root:The best ap is reached at epoch 97...
+INFO:root:Epoch 100/100 | Validation ap 0.8713 | Validation auc 0.8897 | Train time 4.74 s | Validation time 1.87 s | Train Throughput 0.00 samples/s |
+INFO:root:Test ap:0.881410  test auc:0.899726
+INFO:root:Avg epoch time: 4.683877785205841
+INFO:root:The best ap is reached at epoch 97...
+这个是简化GRU
+INFO:root:train step: 110
+INFO:root:Epoch 100/100 | Validation ap 0.8498 | Validation auc 0.8723 | Train time 4.83 s | Validation time 1.83 s | Train Throughput 0.00 samples/s |
+INFO:root:Test ap:0.874390  test auc:0.893033
+INFO:root:Best val AP: 0.8498 & val AUC: 0.8723
+INFO:root:Avg epoch time: 4.831668865680695
+INFO:root:The best ap is reached at epoch 100...
+
+NFO:root:train step: 110
+INFO:root:Epoch 100/100 | Validation ap 0.8562 | Validation auc 0.8767 | Train time 4.57 s | Validation time 1.84 s | Train Throughput 0.00 samples/s |
+INFO:root:Test ap:0.878986  test auc:0.896400
+INFO:root:Best val AP: 0.8562 & val AUC: 0.8767
+INFO:root:Avg epoch time: 4.554862785339355
+INFO:root:The best ap is reached at epoch 100...

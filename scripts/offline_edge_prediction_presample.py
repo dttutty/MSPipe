@@ -280,7 +280,9 @@ def main():
     # put the features in shared memory when using distributed training
     node_feats, edge_feats = load_feat(
         args.data, shared_memory=args.distributed,
-        local_rank=args.local_rank, local_world_size=args.local_world_size)
+        local_rank=args.local_rank, local_world_size=args.local_world_size,
+        load_node=data_config["node_feature"],
+        load_edge=data_config["edge_feature"])
 
     dim_node = 0 if node_feats is None else node_feats.shape[1]
     dim_edge = 0 if edge_feats is None else edge_feats.shape[1]

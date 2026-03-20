@@ -11,7 +11,6 @@ from dgl.heterograph import DGLBlock
 
 from gnnflow.models.modules.layers import FixTimeEncode, TimeEncode
 
-
 class GRUMemeoryUpdater(torch.nn.Module):
     """
     GRU memory updater proposed by TGN

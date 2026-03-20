@@ -4,8 +4,10 @@ enable_language(CUDA)
 
 set(TARGET_LIB "libgnnflow")
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CUDA_STANDARD 17)
+set(CMAKE_CUDA_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE TRUE)
 
 # set cuda arch
@@ -18,17 +20,16 @@ string(REPLACE "." "" CUDA_ARCH_LIST "${INSTALLED_GPU_CCS_3}")
 set(CMAKE_CUDA_ARCHITECTURES ${CUDA_ARCH_LIST})
 message(STATUS "CUDA_ARCH_LIST: ${CUDA_ARCH_LIST}")
 
-# 3rd party
+# 3rd party (system-installed)
 find_package(PythonLibs REQUIRED)
-add_subdirectory(third_party/pybind11)
-
+find_package(pybind11 REQUIRED)
+find_package(spdlog REQUIRED)
+find_package(rmm REQUIRED)
+find_package(absl REQUIRED)
 
 include_directories(${PYTHON_INCLUDE_DIRS})
 include_directories(${PROJECT_SOURCE_DIR}/gnnflow/csrc)
 include_directories(/usr/local/cuda/include)
-include_directories(third_party/pybind11/include)
-include_directories(third_party/spdlog/include)
-include_directories(third_party/rmm/include)
 
 
 file(GLOB_RECURSE GNNFLOW_SRC_FILES ${PROJECT_SOURCE_DIR}/gnnflow/csrc/*.cc)
@@ -39,7 +40,6 @@ list(APPEND GNNFLOW_SRC_FILES ${GNNFLOW_SRC_CUDA_FILES})
 
 pybind11_add_module(${TARGET_LIB} ${GNNFLOW_SRC_FILES})
 
-add_subdirectory(third_party/abseil-cpp)
 target_link_libraries(${TARGET_LIB} PRIVATE absl::flat_hash_map)
 
 find_package(Torch REQUIRED)

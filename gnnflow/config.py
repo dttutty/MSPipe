@@ -26,9 +26,9 @@ def get_default_config(model: str, dataset: str):
 
 
 _tgn_default_config = {
-    "dropout": 0.1,
+    "dropout": 0.2,
     "att_head": 2,
-    "att_dropout": 0.1,
+    "att_dropout": 0.2,
     "num_layers": 1,
     "fanouts": [10],
     "sample_strategy": "recent",
@@ -36,10 +36,10 @@ _tgn_default_config = {
     "snapshot_time_window": 0,
     "prop_time": False,
     "use_memory": True,
-    "dim_time": 100,
-    "dim_embed": 100,
-    "dim_memory": 100,
-    "batch_size": 600
+    "dim_time": 128,
+    "dim_embed": 128,
+    "dim_memory": 128,
+    "batch_size": 1200
 }
 
 _apan_default_config = {
@@ -107,6 +107,8 @@ _dysat_default_config = {
     "dim_embed": 100,
     "batch_size": 4000
 }
+
+
 
 _graphsage_default_config = {
     "dim_embed": 100,
@@ -184,7 +186,7 @@ _lastfm_default_config = {
     "insertion_policy": "insert",
     "undirected": True,
     "node_feature": False,
-    "edge_feature": True,
+    "edge_feature": False,
 }
 
 _gdelt_default_config = {
