@@ -38,8 +38,8 @@ _tgn_default_config = {
     "use_memory": True,
     "dim_time": 128,
     "dim_embed": 128,
-    "dim_memory": 512,
-    "batch_size": 4000
+    "dim_memory": 128,
+    "batch_size": 1200
 }
 
 _apan_default_config = {

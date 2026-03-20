@@ -260,7 +260,8 @@ class Cache:
 
     def fetch_feature(self, mfgs: List[List[DGLBlock]],
                       eid: Optional[np.ndarray] = None, update_cache: bool = True,
-                      target_edge_features: bool = True):
+                      target_edge_features: bool = True,
+                      return_target_edge_features: bool = False):
         """Fetching the node/edge features of input_node_ids
 
         Args:
@@ -271,7 +272,10 @@ class Cache:
 
         Returns:
             mfgs: message-passing flow graphs with node/edge features
+            target_edge_feat: returned only when return_target_edge_features is True
         """
+        target_edge_feat = None
+
         if self.dim_node_feat != 0:
             i = 0
             hit_ratio_sum = 0
@@ -413,18 +417,19 @@ class Cache:
                     num_edges = mfgs[-1][0].num_dst_nodes() // (
                         self.neg_sample_ratio + 2)
                     nid = mfgs[-1][0].srcdata['ID'][:num_edges]
-                    self.target_edge_features.put(self.kvstore_client.pull(
-                        torch.from_numpy(eid), mode='edge', nid=nid).float())
+                    target_edge_feat = self.kvstore_client.pull(
+                        torch.from_numpy(eid), mode='edge', nid=nid).float()
                     # self.target_edge_features = self.kvstore_client.pull(
                     #     torch.from_numpy(eid), mode='edge', nid=nid).float()
                 else:
                     # self.target_edge_features = self.edge_feats[eid]
-                    self.target_edge_features.put(self.edge_feats[eid])
+                    target_edge_feat = self.edge_feats[eid]
 
-        if self.dim_edge_feat == 0 and target_edge_features:
-            # Keep queue in sync when no edge features exist.
-            self.target_edge_features.put(None)
+                if not return_target_edge_features:
+                    self.target_edge_features.put(target_edge_feat)
 
+        if return_target_edge_features:
+            return mfgs, target_edge_feat
         return mfgs
 
     def fetch_feature_local(self, mfgs: List[List[DGLBlock]],

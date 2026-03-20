@@ -71,6 +71,9 @@ parser.add_argument("--print-freq", help="print frequency",
 parser.add_argument("--seed", type=int, default=42)
 parser.add_argument("--ingestion-batch-size", type=int, default=1000,
                     help="ingestion batch size")
+parser.add_argument("--strict-memory", action="store_true",
+                    help="disable pipelined stale-memory training and "
+                    "force memory updates to complete before the next batch")
 
 # optimization
 parser.add_argument("--cache", choices=cache_names, help="feature cache:" +
@@ -166,8 +169,8 @@ def evaluate(dataloader, sampler, model, criterion, cache, device, nodes=None, n
                 block = None
 
             mfgs_to_cuda(mfgs, device)
-            mfgs = cache.fetch_feature(
-                mfgs, eid)
+            mfgs, target_edge_feats = cache.fetch_feature(
+                mfgs, eid, return_target_edge_features=True)
 
             if args.use_memory:
                 b = mfgs[0][0]
@@ -185,11 +188,11 @@ def evaluate(dataloader, sampler, model, criterion, cache, device, nodes=None, n
                 # use one function
                 if args.distributed:
                     model.module.memory.update_mem_mail(
-                        **model.module.last_updated, edge_feats=cache.target_edge_features.get(),
+                        **model.module.last_updated, edge_feats=target_edge_feats,
                         neg_sample_ratio=num_neg, block=block)
                 else:
                     model.memory.update_mem_mail(
-                        **model.last_updated, edge_feats=cache.target_edge_features.get(),
+                        **model.last_updated, edge_feats=target_edge_feats,
                         neg_sample_ratio=num_neg, block=block)
 
             total_loss += criterion(pred_pos, torch.ones_like(pred_pos))
@@ -456,6 +459,8 @@ def train(train_loader, val_loader, sampler, model, optimizer, criterion,
     signal_queue = Queue(maxsize=4)
 
     logging.info('Start training...')
+    logging.info('Training memory mode: {}'.format(
+        'strict fresh memory' if args.strict_memory else 'pipelined stale memory'))
     for e in range(args.epoch):
         model.train()
 
@@ -476,19 +481,59 @@ def train(train_loader, val_loader, sampler, model, optimizer, criterion,
         total_model_train_time = 0
         total_samples = 0
 
-
-
-        pool = ThreadPool(processes=num_process)
         epoch_time_start = time.time()
-        for i, (target_nodes, ts, eid) in enumerate(train_loader):
-            pool.apply_async(training_batch, args=(model, sampler, cache, target_nodes,
-                                                    ts, eid, device, args.distributed, optimizer, criterion, stream_pool[i % num_process], signal_queue, lock_pool, i, args.rank, args.print_freq, most_similar))
 
-        pool.close()
-        pool.join()
+        if args.strict_memory:
+            serial_stream = torch.cuda.default_stream(device=device)
+            for i, (target_nodes, ts, eid) in enumerate(train_loader):
+                total_samples += training_batch(
+                    model, sampler, cache, target_nodes, ts, eid, device,
+                    args.distributed, optimizer, criterion, serial_stream,
+                    signal_queue, lock_pool, i, args.rank, most_similar)
+        else:
+            pool = ThreadPool(processes=num_process)
+            results = []
+            for i, (target_nodes, ts, eid) in enumerate(train_loader):
+                results.append(pool.apply_async(
+                    training_batch,
+                    args=(model, sampler, cache, target_nodes,
+                          ts, eid, device, args.distributed, optimizer, criterion,
+                          stream_pool[i % num_process], signal_queue, lock_pool, i,
+                          args.rank, most_similar)))
+
+            pool.close()
+            try:
+                for result in results:
+                    total_samples += int(result.get())
+            except Exception:
+                pool.terminate()
+                raise
+            finally:
+                pool.join()
+
+        torch.cuda.synchronize(device)
 
         epoch_time = time.time() - epoch_time_start
         epoch_time_sum += epoch_time
+        local_train_throughput = total_samples / epoch_time if epoch_time > 0 else 0.0
+        per_gpu_train_stats = [(args.rank, total_samples, epoch_time, local_train_throughput)]
+
+        if args.distributed:
+            local_train_stats = torch.tensor(
+                [float(total_samples), float(epoch_time)],
+                dtype=torch.float64, device=device)
+            gathered_train_stats = [
+                torch.zeros(2, dtype=torch.float64, device=device)
+                for _ in range(args.world_size)
+            ]
+            torch.distributed.all_gather(gathered_train_stats, local_train_stats)
+            per_gpu_train_stats = []
+            for rank_id, stats in enumerate(gathered_train_stats):
+                rank_events = int(stats[0].item())
+                rank_epoch_time = float(stats[1].item())
+                rank_throughput = rank_events / rank_epoch_time if rank_epoch_time > 0 else 0.0
+                per_gpu_train_stats.append(
+                    (rank_id, rank_events, rank_epoch_time, rank_throughput))
 
         # logging.info("epoch time: {}".format(epoch_time))
         # if args.distributed:
@@ -530,8 +575,18 @@ def train(train_loader, val_loader, sampler, model, optimizer, criterion,
                 total_model_train_time = metrics.tolist()
 
         if args.rank == 0:
-            logging.info("Epoch {:d}/{:d} | Validation ap {:.4f} | Validation auc {:.4f} | Train time {:.2f} s | Validation time {:.2f} s | Train Throughput {:.2f} samples/s |".format(
-                e + 1, args.epoch, val_ap, val_auc, epoch_time, val_time, total_samples * args.world_size / epoch_time))
+            avg_per_gpu_train_throughput = sum(
+                stat[3] for stat in per_gpu_train_stats) / len(per_gpu_train_stats)
+            per_gpu_train_log = " | ".join(
+                "rank{}: {:.2f} events/s ({} events / {:.2f} s)".format(
+                    rank_id, rank_throughput, rank_events, rank_epoch_time)
+                for rank_id, rank_events, rank_epoch_time, rank_throughput
+                in per_gpu_train_stats)
+            logging.info("Epoch {:d}/{:d} | Validation ap {:.4f} | Validation auc {:.4f} | Train time {:.2f} s | Validation time {:.2f} s | Avg per-GPU Train Throughput {:.2f} events/s |".format(
+                e + 1, args.epoch, val_ap, val_auc, epoch_time, val_time,
+                avg_per_gpu_train_throughput))
+            logging.info("Per-GPU Train Throughput | {}".format(
+                per_gpu_train_log))
             logging.info('Test ap:{:4f}  test auc:{:4f}'.format(ap, auc))
 
         if args.rank == 0 and val_ap > best_ap:

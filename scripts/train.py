@@ -31,8 +31,9 @@ def training_batch(model, sampler, cache, target_nodes, ts, eid, device, distrib
         # lock_pool[0].release()
         with lock_pool[1]:
             mfgs_to_cuda(mfgs, device)
-            mfgs = cache.fetch_feature(
-                mfgs, eid, target_edge_features=True)  # because all use memory
+            mfgs, target_edge_feats = cache.fetch_feature(
+                mfgs, eid, target_edge_features=True,
+                return_target_edge_features=True)  # because all use memory
         with lock_pool[2]:
             b = mfgs[0][0]  # type: DGLBlock
             global iter_mem_update
@@ -73,11 +74,11 @@ def training_batch(model, sampler, cache, target_nodes, ts, eid, device, distrib
                 # use one function
                 if distributed:
                     model.module.memory.update_mem_mail(
-                        **last_updated, edge_feats=cache.target_edge_features.get(),
+                        **last_updated, edge_feats=target_edge_feats,
                         neg_sample_ratio=1, block=block)
                 else:
                     model.memory.update_mem_mail(
-                        **last_updated, edge_feats=cache.target_edge_features.get(),
+                        **last_updated, edge_feats=target_edge_feats,
                         neg_sample_ratio=1, block=block)
                 
                 # global iter_mem_update
@@ -86,3 +87,4 @@ def training_batch(model, sampler, cache, target_nodes, ts, eid, device, distrib
                 # if rank == 0:
                 #     logging.info('current iteration: {}'.format(i))
                 #     logging.info('current update: {}'.format(iter_mem_update))
+        return int(len(eid))
