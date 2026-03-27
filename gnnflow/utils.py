@@ -68,8 +68,8 @@ def load_dataset(dataset: str, data_dir: Optional[str] = None) -> \
     # if 'Unnamed: 0' in full_data.columns:
     full_data.rename(columns={'Unnamed: 0': 'eid'}, inplace=True)
 
-    train_end = full_data['ext_roll'].values.searchsorted(1)
-    val_end = full_data['ext_roll'].values.searchsorted(2)
+    train_end = full_data['default_split'].values.searchsorted(1)
+    val_end = full_data['default_split'].values.searchsorted(2)
     train_data = full_data[:train_end]
     val_data = full_data[train_end:val_end]
     test_data = full_data[val_end:]
@@ -123,7 +123,7 @@ def load_dataset_in_chunks(dataset: str, data_dir: Optional[str] = None, chunksi
         raise ValueError('{} does not exist'.format(path))
 
     # NB: pyarrow is not support with chunksize
-    return pd.read_csv(path, chunksize=chunksize, usecols=['src', 'dst', 'time', 'Unnamed: 0', 'ext_roll'])
+    return pd.read_csv(path, chunksize=chunksize, usecols=['src', 'dst', 'time', 'Unnamed: 0', 'default_split'])
 
 
 def load_partitioned_dataset(dataset: str, data_dir: Optional[str] = None, rank: int = 0, world_size: int = 1, partition_train_data: bool = False):

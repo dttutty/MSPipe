@@ -114,7 +114,7 @@ class Dispatcher:
         dst_nodes = torch.from_numpy(dataset["dst"].values.astype(np.int64))
         timestamps = torch.from_numpy(dataset["time"].values.astype(np.float32))
         eids = torch.from_numpy(dataset["eid"].values.astype(np.int64))
-        train_end = dataset['ext_roll'].values.searchsorted(1)
+        train_end = dataset['default_split'].values.searchsorted(1)
 
         # dispatch edges
         src_nodes_train = src_nodes[:train_end]

@@ -684,7 +684,7 @@ class TestTemporalSampler(unittest.TestCase):
     @unittest.skip("debug only")
     def test_sampler_use_df(self):
         train_df, _, _, df = load_dataset(dataset="REDDIT")
-        train_edge_end = df[df['ext_roll'].gt(0)].index[0]
+        train_edge_end = df[df['default_split'].gt(0)].index[0]
         df = df[:train_edge_end]
         df = df.astype({'time': np.float32})
         config = default_config.copy()

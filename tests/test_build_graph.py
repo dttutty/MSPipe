@@ -27,7 +27,7 @@ class TestBuildGraph(unittest.TestCase):
         config["undirected"] = False
         dgraph = build_dynamic_graph(**config, dataset_df=train_df)
 
-        train_edge_end = df[df['ext_roll'].gt(0)].index[0]
+        train_edge_end = df[df['default_split'].gt(0)].index[0]
         srcs = np.array(df['src'][:train_edge_end], dtype=int)
         srcs = np.unique(srcs)
 
@@ -61,7 +61,7 @@ class TestBuildGraph(unittest.TestCase):
         config["undirected"] = True
         dgraph = build_dynamic_graph(**config, dataset_df=train_df)
 
-        train_edge_end = df[df['ext_roll'].gt(0)].index[0]
+        train_edge_end = df[df['default_split'].gt(0)].index[0]
         srcs = np.array(df['src'][:train_edge_end], dtype=int)
         srcs = np.unique(srcs)
 
