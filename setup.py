@@ -128,7 +128,7 @@ class CustomBuildExt(build_ext):
         print("Building with CMake config: {}".format(config))
 
         ext_name = self.extensions[0].name
-        build_dir = self.get_ext_fullpath(ext_name).replace(
+        build_dir = self.get_full_graph_with_reverse_edgespath(ext_name).replace(
             self.get_ext_filename(ext_name), '')
         build_dir = os.path.abspath(build_dir)
 

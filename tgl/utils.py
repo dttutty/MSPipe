@@ -6,7 +6,7 @@ import dgl
 
 def load_graph(d):
     # df = pd.read_csv('DATA/{}/edges.csv'.format(d))
-    g = np.load('../data/{}/ext_full.npz'.format(d))
+    g = np.load('../data/{}/full_graph_with_reverse_edges.npz'.format(d))
     return g
 
 def to_dgl_blocks(ret, hist, reverse=False):
